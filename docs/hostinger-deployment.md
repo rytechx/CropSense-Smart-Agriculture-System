@@ -115,6 +115,8 @@ Open:
 https://your-domain.com
 ```
 
-The site will redirect to the login page.
+The site will open the public CropSense welcome page. Use its **Sign In** button
+to open `login.php`, then confirm a valid account still reaches the protected
+dashboard.
 
 Any valid, unique email address can be assigned to either the Administrator or MAO Staff role. Access permissions come from the role stored in the `users` table.
