@@ -55,19 +55,116 @@ require_once __DIR__ . "/../config/database.php";
 
         if (password_verify($password, $user['password'])) {
 
-            session_regenerate_id(true);
+    require_once __DIR__ . '/mailer.php';
 
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['fullname'] = $user['fullname'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
+    /* -----------------------------------------
+       Invalidate previous unused OTPs
+       ----------------------------------------- */
+    $invalidateOtp = $conn->prepare(
+        "UPDATE login_otps
+         SET used = 1
+         WHERE user_id = ?
+         AND used = 0"
+    );
 
-            cropsense_audit_log($conn, (int) $user['id'], "User signed in");
+    if ($invalidateOtp) {
+        $invalidateOtp->bind_param("i", $user['id']);
+        $invalidateOtp->execute();
+        $invalidateOtp->close();
+    }
 
-            header("Location: ../dashboard.php");
-            exit();
+    /* -----------------------------------------
+       Generate secure 6-digit OTP
+       ----------------------------------------- */
+    $otp = (string) random_int(100000, 999999);
 
-        } else {
+    /* Never save OTP in plaintext */
+    $otpHash = password_hash($otp, PASSWORD_DEFAULT);
+
+    /* 5-minute expiration */
+    $expiresAt = date(
+        'Y-m-d H:i:s',
+        time() + 300
+    );
+
+    /* -----------------------------------------
+       Save OTP
+       ----------------------------------------- */
+    $otpStmt = $conn->prepare(
+        "INSERT INTO login_otps
+        (user_id, otp_hash, expires_at, attempts, used)
+        VALUES (?, ?, ?, 0, 0)"
+    );
+
+    if (!$otpStmt) {
+
+        $_SESSION['error'] =
+            "Unable to prepare verification code.";
+
+        header("Location: ../login.php");
+        exit();
+    }
+
+    $otpStmt->bind_param(
+        "iss",
+        $user['id'],
+        $otpHash,
+        $expiresAt
+    );
+
+    if (!$otpStmt->execute()) {
+
+        $_SESSION['error'] =
+            "Unable to generate verification code.";
+
+        header("Location: ../login.php");
+        exit();
+    }
+
+    $otpStmt->close();
+
+    /* -----------------------------------------
+       Send OTP through email
+       ----------------------------------------- */
+    $emailSent = cropsenseSendOtp(
+        $user['email'],
+        $user['fullname'],
+        $otp
+    );
+
+    if (!$emailSent) {
+
+        $_SESSION['error'] =
+            "Unable to send verification code. Please try again.";
+
+        header("Location: ../login.php");
+        exit();
+    }
+
+    /* -----------------------------------------
+       Temporary 2FA session
+       NOT a logged-in session yet
+       ----------------------------------------- */
+    session_regenerate_id(true);
+
+    $_SESSION['pending_2fa_user_id'] =
+        (int) $user['id'];
+
+    $_SESSION['pending_2fa_email'] =
+        $user['email'];
+
+    $_SESSION['otp_sent_at'] =
+        time();
+
+    cropsense_audit_log(
+        $conn,
+        (int) $user['id'],
+        "Email OTP sent"
+    );
+
+    header("Location: ../otp.php");
+    exit();
+} else {
 
             $_SESSION['error'] = "Invalid password.";
 
