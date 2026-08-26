@@ -2135,3 +2135,634 @@ body:not(.dashboard-body) {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* Live telemetry level badges */
+.sensor-grid--soil .sensor-card-content {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.sensor-grid--soil .sensor-value {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+
+.sensor-grid--soil .sensor-unit,
+.sensor-grid--soil .nutrient-measurement,
+.sensor-grid--soil .nutrient-measurement .sensor-unit {
+    margin: 0;
+    color: var(--cs-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+    text-transform: none;
+}
+
+.sensor-grid--soil .telemetry-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 7px;
+}
+
+.sensor-grid--soil .telemetry-meta > small {
+    flex: 1 1 110px;
+    margin: 0;
+}
+
+.sensor-grid--soil .nutrient-card > .sensor-card-content {
+    width: 100%;
+}
+
+.sensor-grid--soil .nutrient-values {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    margin-top: 12px;
+}
+
+.sensor-grid--soil .nutrient-reading {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px 10px;
+    padding: 10px;
+    border: 1px solid #e1ead8;
+    border-radius: 10px;
+    background: #f7faef;
+    text-align: left;
+}
+
+.sensor-grid--soil .nutrient-reading > b {
+    grid-column: 1 / -1;
+    color: var(--cs-forest-800);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.sensor-grid--soil .nutrient-reading .nutrient-measurement {
+    min-height: 0;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.sensor-grid--soil .nutrient-measurement output {
+    color: var(--cs-ink);
+    font-size: 18px;
+    font-weight: 780;
+    font-variant-numeric: tabular-nums;
+}
+
+.sensor-grid--soil .status-badge {
+    min-width: 76px;
+    min-height: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.sensor-grid--soil .status-badge::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.sensor-grid--soil .status-badge.status-low {
+    color: #b42318;
+    background: #fee4e2;
+}
+
+.sensor-grid--soil .status-badge.status-medium {
+    color: #067647;
+    background: #dcfae6;
+}
+
+.sensor-grid--soil .status-badge.status-high {
+    color: #b54708;
+    background: #fef0c7;
+}
+
+.sensor-grid--soil .status-badge.status-unknown {
+    color: #475467;
+    background: #f2f4f7;
+}
+
+.theme-dark .sensor-grid--soil .nutrient-reading {
+    border-color: rgba(210, 235, 216, 0.1);
+    background: rgba(184, 223, 104, 0.05);
+}
+
+.theme-dark .sensor-grid--soil .nutrient-measurement output {
+    color: var(--cs-ink);
+}
+
+@media (max-width: 760px) {
+    .sensor-grid--soil .nutrient-values {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Sensor-based crop suitability assessment */
+.dashboard-content .crop-assessment-panel {
+    grid-column: 1 / -1;
+    grid-row: auto;
+}
+
+.crop-assessment-summary {
+    display: grid;
+    grid-template-columns: minmax(190px, 0.34fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
+}
+
+.crop-assessment-summary .match-summary {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 9px;
+    padding: 18px;
+    border: 1px solid #dce8dc;
+    border-radius: 14px;
+    background: #f5faf3;
+}
+
+.crop-assessment-summary .match-summary > span:first-child,
+.crop-assessment-summary-copy > span {
+    color: var(--cs-green-600);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.crop-assessment-summary .match-summary > strong {
+    margin: 0;
+    color: var(--cs-forest-950);
+    font-size: clamp(34px, 4vw, 48px);
+    letter-spacing: -0.05em;
+}
+
+.crop-assessment-summary-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 22px;
+    border: 1px solid var(--cs-line);
+    border-radius: 14px;
+    background: #fff;
+}
+
+.crop-assessment-summary-copy h4 {
+    margin: 7px 0 0;
+    color: var(--cs-forest-950);
+    font-size: clamp(20px, 2vw, 27px);
+    font-weight: 780;
+    letter-spacing: -0.025em;
+}
+
+.crop-assessment-summary-copy p {
+    margin: 8px 0 0;
+    color: var(--cs-muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.assessment-method-note,
+.crop-assessment-disclaimer {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    margin-top: 14px;
+    padding: 13px 15px;
+    border: 1px solid #dce7e1;
+    border-radius: 12px;
+    color: #315a4a;
+    background: #f7faf8;
+}
+
+.assessment-method-note > i,
+.crop-assessment-disclaimer > i {
+    margin-top: 2px;
+    color: var(--cs-green-600);
+    font-size: 17px;
+}
+
+.assessment-method-note strong {
+    color: var(--cs-forest-800);
+    font-size: 11px;
+}
+
+.assessment-method-note p,
+.crop-assessment-disclaimer p {
+    margin: 3px 0 0;
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+.crop-assessment-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.crop-assessment-card {
+    overflow: hidden;
+    border: 1px solid var(--cs-line);
+    border-left: 4px solid #98a2b3;
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.crop-assessment-card.is-s1 {
+    border-left-color: #12b76a;
+}
+
+.crop-assessment-card.is-s2 {
+    border-left-color: #0e9384;
+}
+
+.crop-assessment-card.is-s3 {
+    border-left-color: #f79009;
+}
+
+.crop-assessment-card.is-n {
+    border-left-color: #f04438;
+}
+
+.crop-assessment-card[open] {
+    border-color: #cbdad0;
+    box-shadow: 0 14px 34px rgba(8, 43, 33, 0.08);
+}
+
+.crop-assessment-card > summary {
+    min-height: 76px;
+    display: grid;
+    grid-template-columns: auto auto minmax(130px, 1fr) auto auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.crop-assessment-card > summary::-webkit-details-marker {
+    display: none;
+}
+
+.crop-assessment-card > summary:focus-visible {
+    outline: 3px solid rgba(115, 207, 194, 0.7);
+    outline-offset: -3px;
+}
+
+.crop-assessment-rank,
+.crop-assessment-icon {
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+}
+
+.crop-assessment-rank {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 7px;
+    color: var(--cs-forest-700);
+    background: #edf5ed;
+    font-size: 10px;
+    font-weight: 850;
+}
+
+.crop-assessment-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--cs-green-600);
+    background: #edf8ee;
+    font-size: 18px;
+}
+
+.crop-assessment-name strong,
+.crop-assessment-name small {
+    display: block;
+}
+
+.crop-assessment-name strong {
+    color: var(--cs-forest-950);
+    font-size: 15px;
+}
+
+.crop-assessment-name small {
+    margin-top: 2px;
+    color: var(--cs-muted);
+    font-size: 9px;
+    font-style: italic;
+}
+
+.crop-assessment-percentage {
+    color: var(--cs-forest-950);
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+}
+
+.crop-assessment-chevron {
+    color: var(--cs-muted);
+    transition: transform 160ms ease;
+}
+
+.crop-assessment-card[open] .crop-assessment-chevron {
+    transform: rotate(180deg);
+}
+
+.suitability-badge,
+.parameter-assessment-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 25px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.025em;
+    line-height: 1.2;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.suitability-badge.is-s1,
+.parameter-assessment-badge.is-optimum {
+    color: #067647;
+    background: #dcfae6;
+}
+
+.suitability-badge.is-s2,
+.parameter-assessment-badge.is-acceptable {
+    color: #0e7090;
+    background: #e0f2fe;
+}
+
+.suitability-badge.is-s3,
+.parameter-assessment-badge.is-marginal {
+    color: #b54708;
+    background: #fef0c7;
+}
+
+.suitability-badge.is-n,
+.parameter-assessment-badge.is-unsuitable {
+    color: #b42318;
+    background: #fee4e2;
+}
+
+.suitability-badge.is-na,
+.parameter-assessment-badge.is-no-data,
+.parameter-assessment-badge.is-not-assessed {
+    color: #475467;
+    background: #f2f4f7;
+}
+
+.crop-assessment-details {
+    padding: 0 15px 16px;
+    border-top: 1px solid #edf1ed;
+}
+
+.crop-assessment-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 14px 0;
+}
+
+.crop-assessment-metrics > div {
+    padding: 10px;
+    border-radius: 9px;
+    background: #f7faf7;
+}
+
+.crop-assessment-metrics span,
+.crop-assessment-metrics strong {
+    display: block;
+}
+
+.crop-assessment-metrics span {
+    color: var(--cs-muted);
+    font-size: 9px;
+    font-weight: 750;
+    text-transform: uppercase;
+}
+
+.crop-assessment-metrics strong {
+    margin-top: 4px;
+    color: var(--cs-forest-900);
+    font-size: 11px;
+}
+
+.crop-parameter-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--cs-line);
+    border-radius: 10px;
+}
+
+.crop-parameter-table {
+    width: 100%;
+    min-width: 650px;
+    border-collapse: collapse;
+}
+
+.crop-parameter-table th,
+.crop-parameter-table td {
+    padding: 9px 11px;
+    border-bottom: 1px solid #edf1ed;
+    color: var(--cs-ink);
+    font-size: 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.crop-parameter-table thead th {
+    color: var(--cs-forest-700);
+    background: #f6f9f5;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.crop-parameter-table tbody th {
+    font-weight: 750;
+}
+
+.crop-parameter-table tbody tr:last-child th,
+.crop-parameter-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.limiting-factor-panel {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #f0dfc2;
+    border-radius: 10px;
+    background: #fffbf2;
+}
+
+.limiting-factor-panel > div:first-child > span,
+.limiting-factor-panel > div:first-child > strong {
+    display: block;
+}
+
+.limiting-factor-panel > div:first-child > span {
+    color: #b54708;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.limiting-factor-panel > div:first-child > strong {
+    margin-top: 3px;
+    color: #714b18;
+    font-size: 11px;
+}
+
+.limiting-factor-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 8px;
+    margin-top: 9px;
+}
+
+.limiting-factor-list:empty {
+    display: none;
+}
+
+.limiting-factor-list > div {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 5px 8px;
+    padding: 9px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.74);
+}
+
+.limiting-factor-list strong,
+.limiting-factor-list span,
+.limiting-factor-list small {
+    font-size: 9px;
+}
+
+.limiting-factor-list small {
+    grid-column: 1 / -1;
+    color: #7b6445;
+}
+
+.crop-assessment-disclaimer {
+    border-color: #d9e4ed;
+    color: #445f70;
+    background: #f4f8fb;
+}
+
+.crop-assessment-disclaimer > i {
+    color: #287a96;
+}
+
+.theme-dark .crop-assessment-summary .match-summary,
+.theme-dark .crop-assessment-summary-copy,
+.theme-dark .crop-assessment-card,
+.theme-dark .crop-assessment-metrics > div,
+.theme-dark .crop-parameter-table thead th,
+.theme-dark .limiting-factor-panel,
+.theme-dark .limiting-factor-list > div,
+.theme-dark .assessment-method-note,
+.theme-dark .crop-assessment-disclaimer {
+    color: var(--cs-ink);
+    border-color: var(--cs-line);
+    background: #12231b;
+}
+
+.theme-dark .crop-assessment-summary-copy h4,
+.theme-dark .crop-assessment-summary .match-summary > strong,
+.theme-dark .crop-assessment-name strong,
+.theme-dark .crop-assessment-percentage,
+.theme-dark .crop-assessment-metrics strong,
+.theme-dark .crop-parameter-table th,
+.theme-dark .crop-parameter-table td,
+.theme-dark .limiting-factor-panel > div:first-child > strong {
+    color: var(--cs-ink);
+}
+
+@media (max-width: 860px) {
+    .crop-assessment-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .crop-assessment-card > summary {
+        grid-template-columns: auto auto minmax(0, 1fr) auto;
+    }
+
+    .crop-assessment-card > summary .suitability-badge {
+        grid-column: 3;
+        grid-row: 2;
+        justify-self: start;
+    }
+
+    .crop-assessment-chevron {
+        grid-column: 4;
+        grid-row: 2;
+    }
+
+    .crop-assessment-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .crop-assessment-card > summary {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 9px;
+    }
+
+    .crop-assessment-icon {
+        display: none;
+    }
+
+    .crop-assessment-percentage {
+        font-size: 17px;
+    }
+
+    .crop-assessment-card > summary .suitability-badge {
+        grid-column: 2;
+        grid-row: 2;
+    }
+
+    .crop-assessment-chevron {
+        grid-column: 3;
+        grid-row: 2;
+    }
+
+    .crop-assessment-metrics {
+        grid-template-columns: 1fr;
+    }
+}

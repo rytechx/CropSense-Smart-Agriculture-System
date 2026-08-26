@@ -17,7 +17,7 @@ cropsense_apply_security_headers("web");
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/style.css?v=20260722-classic-hero-v4">
-    <link rel="stylesheet" href="/assets/css/design-system.css?v=20260817-ui-refresh">
+    <link rel="stylesheet" href="/assets/css/design-system.css?v=20260826-crop-suitability-v1">
 </head>
 
 <body class="dashboard-body sidebar-initializing<?php echo isset($bodyExtraClass) ? ' ' . htmlspecialchars($bodyExtraClass) : ''; ?>">

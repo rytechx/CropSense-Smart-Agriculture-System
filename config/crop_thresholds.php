@@ -1,5 +1,7 @@
 <?php
 
+// The legacy "temperature" key maps to the RS485 probe's soil temperature.
+// It is retained to preserve the existing sensor/API contract.
 return [
     "near_tolerance" => [
         "soil_ph" => 0.20,
@@ -41,4 +43,3 @@ return [
         ],
     ],
 ];
-

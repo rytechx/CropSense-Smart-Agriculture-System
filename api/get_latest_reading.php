@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../includes/security.php";
+require_once __DIR__ . "/../includes/crop_suitability.php";
 
 cropsense_apply_security_headers("api");
 header("Allow: GET");
@@ -67,4 +68,18 @@ if ($age > 60) {
 $row["soil_moisture"] = $row["moisture"];
 $row["soil_ph"] = $row["ph"];
 $row["soil_ec"] = $row["ec"];
+
+try {
+    // Additive response data: existing sensor fields and API consumers remain unchanged.
+    $row["crop_suitability"] = cropsense_assess_crop_suitability($conn, $row);
+} catch (Throwable $error) {
+    error_log("CropSense suitability assessment failed: " . $error->getMessage());
+    $row["crop_suitability"] = [
+        "title" => "Sensor-Based Crop Suitability Assessment",
+        "error" => "Suitability assessment is temporarily unavailable.",
+        "top_recommendation" => null,
+        "recommendations" => [],
+    ];
+}
+
 latest_response(["ok" => true, "data" => $row]);

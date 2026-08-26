@@ -52,7 +52,7 @@ if (!function_exists("cropsense_validate_sensor_reading")) {
         $ranges = [
             "soil_ph" => [0, 14, "pH below 0 or above 14"],
             "soil_moisture" => [0, 100, "Moisture below 0% or above 100%"],
-            "temperature" => [-20, 80, "Temperature outside accepted sensor range"],
+            "temperature" => [-20, 80, "Soil temperature outside accepted sensor range"],
             "soil_ec" => [0, null, "Negative EC value"],
             "nitrogen" => [0, null, "Negative nitrogen value"],
             "phosphorus" => [0, null, "Negative phosphorus value"],
