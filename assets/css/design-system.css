@@ -2271,6 +2271,16 @@ body:not(.dashboard-body) {
     background: #f2f4f7;
 }
 
+.sensor-grid--soil .nutrient-card .status-badge.status-medium {
+    color: #b54708;
+    background: #fef0c7;
+}
+
+.sensor-grid--soil .nutrient-card .status-badge.status-high {
+    color: #067647;
+    background: #dcfae6;
+}
+
 .theme-dark .sensor-grid--soil .nutrient-reading {
     border-color: rgba(210, 235, 216, 0.1);
     background: rgba(184, 223, 104, 0.05);
@@ -2497,8 +2507,7 @@ body:not(.dashboard-body) {
     transform: rotate(180deg);
 }
 
-.suitability-badge,
-.parameter-assessment-badge {
+.suitability-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2513,33 +2522,27 @@ body:not(.dashboard-body) {
     text-transform: uppercase;
 }
 
-.suitability-badge.is-s1,
-.parameter-assessment-badge.is-optimum {
+.suitability-badge.is-s1 {
     color: #067647;
     background: #dcfae6;
 }
 
-.suitability-badge.is-s2,
-.parameter-assessment-badge.is-acceptable {
+.suitability-badge.is-s2 {
     color: #0e7090;
     background: #e0f2fe;
 }
 
-.suitability-badge.is-s3,
-.parameter-assessment-badge.is-marginal {
+.suitability-badge.is-s3 {
     color: #b54708;
     background: #fef0c7;
 }
 
-.suitability-badge.is-n,
-.parameter-assessment-badge.is-unsuitable {
+.suitability-badge.is-n {
     color: #b42318;
     background: #fee4e2;
 }
 
-.suitability-badge.is-na,
-.parameter-assessment-badge.is-no-data,
-.parameter-assessment-badge.is-not-assessed {
+.suitability-badge.is-na {
     color: #475467;
     background: #f2f4f7;
 }
@@ -2578,104 +2581,7 @@ body:not(.dashboard-body) {
     margin-top: 4px;
     color: var(--cs-forest-900);
     font-size: 11px;
-}
-
-.crop-parameter-table-wrap {
-    overflow-x: auto;
-    border: 1px solid var(--cs-line);
-    border-radius: 10px;
-}
-
-.crop-parameter-table {
-    width: 100%;
-    min-width: 650px;
-    border-collapse: collapse;
-}
-
-.crop-parameter-table th,
-.crop-parameter-table td {
-    padding: 9px 11px;
-    border-bottom: 1px solid #edf1ed;
-    color: var(--cs-ink);
-    font-size: 10px;
-    text-align: left;
-    vertical-align: middle;
-}
-
-.crop-parameter-table thead th {
-    color: var(--cs-forest-700);
-    background: #f6f9f5;
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-}
-
-.crop-parameter-table tbody th {
-    font-weight: 750;
-}
-
-.crop-parameter-table tbody tr:last-child th,
-.crop-parameter-table tbody tr:last-child td {
-    border-bottom: 0;
-}
-
-.limiting-factor-panel {
-    margin-top: 12px;
-    padding: 12px;
-    border: 1px solid #f0dfc2;
-    border-radius: 10px;
-    background: #fffbf2;
-}
-
-.limiting-factor-panel > div:first-child > span,
-.limiting-factor-panel > div:first-child > strong {
-    display: block;
-}
-
-.limiting-factor-panel > div:first-child > span {
-    color: #b54708;
-    font-size: 9px;
-    font-weight: 850;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-.limiting-factor-panel > div:first-child > strong {
-    margin-top: 3px;
-    color: #714b18;
-    font-size: 11px;
-}
-
-.limiting-factor-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 8px;
-    margin-top: 9px;
-}
-
-.limiting-factor-list:empty {
-    display: none;
-}
-
-.limiting-factor-list > div {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 5px 8px;
-    padding: 9px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.74);
-}
-
-.limiting-factor-list strong,
-.limiting-factor-list span,
-.limiting-factor-list small {
-    font-size: 9px;
-}
-
-.limiting-factor-list small {
-    grid-column: 1 / -1;
-    color: #7b6445;
+    line-height: 1.35;
 }
 
 .crop-assessment-disclaimer {
@@ -2692,9 +2598,6 @@ body:not(.dashboard-body) {
 .theme-dark .crop-assessment-summary-copy,
 .theme-dark .crop-assessment-card,
 .theme-dark .crop-assessment-metrics > div,
-.theme-dark .crop-parameter-table thead th,
-.theme-dark .limiting-factor-panel,
-.theme-dark .limiting-factor-list > div,
 .theme-dark .assessment-method-note,
 .theme-dark .crop-assessment-disclaimer {
     color: var(--cs-ink);
@@ -2706,10 +2609,7 @@ body:not(.dashboard-body) {
 .theme-dark .crop-assessment-summary .match-summary > strong,
 .theme-dark .crop-assessment-name strong,
 .theme-dark .crop-assessment-percentage,
-.theme-dark .crop-assessment-metrics strong,
-.theme-dark .crop-parameter-table th,
-.theme-dark .crop-parameter-table td,
-.theme-dark .limiting-factor-panel > div:first-child > strong {
+.theme-dark .crop-assessment-metrics strong {
     color: var(--cs-ink);
 }
 

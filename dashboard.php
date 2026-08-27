@@ -22,7 +22,7 @@ $dashboardCrops = array_intersect_key(
     $dashboardCropConfig["crops"] ?? [],
     array_flip(["rice", "corn", "tobacco"])
 );
-$dashboardParameterDefinitions = cropsense_parameter_definitions();
+$dashboardNpkClassification = $dashboardCropConfig["npk_classification"] ?? [];
 $dashboardSuitability = cropsense_assess_crop_suitability($conn, $latestSensorReading);
 $dashboardCropIcons = [
     "rice" => "bi-droplet-half",
@@ -62,6 +62,20 @@ function dashboard_telemetry_number($reading, $key, $maxDigits = 2)
     return rtrim(rtrim(number_format($value, $maxDigits, ".", ""), "0"), ".");
 }
 
+function dashboard_raw_sensor_value($reading, $key)
+{
+    if (
+        !$reading ||
+        !array_key_exists($key, $reading) ||
+        $reading[$key] === null ||
+        (is_string($reading[$key]) && trim($reading[$key]) === "")
+    ) {
+        return null;
+    }
+
+    return (string) $reading[$key];
+}
+
 function dashboard_relative_time($seconds)
 {
     if ($seconds === null) {
@@ -94,9 +108,9 @@ $sensorPh = dashboard_telemetry_number($latestSensorReading, "soil_ph");
 $sensorPhStatus = $sensorPh === "--" ? "pH sensor not connected" : $sensorUpdatedText;
 $sensorEc = dashboard_number($latestSensorReading, "soil_ec");
 $sensorEcStatus = $latestSensorReading ? $sensorUpdatedText : "Electrical conductivity";
-$sensorNpk = dashboard_telemetry_number($latestSensorReading, "nitrogen")
-    . " / " . dashboard_telemetry_number($latestSensorReading, "phosphorus")
-    . " / " . dashboard_telemetry_number($latestSensorReading, "potassium");
+$sensorNpk = (dashboard_raw_sensor_value($latestSensorReading, "nitrogen") ?? "--")
+    . " / " . (dashboard_raw_sensor_value($latestSensorReading, "phosphorus") ?? "--")
+    . " / " . (dashboard_raw_sensor_value($latestSensorReading, "potassium") ?? "--");
 $sensorActivityTitle = $latestSensorReading
     ? ($sensorIsLive ? "Live sensor reading received" : $sensorStatusLabel)
     : ($rawSensorReading && !$sensorSnapshot["is_valid"] ? "Invalid sensor reading" : "Sensor readings pending");
@@ -200,22 +214,22 @@ include "includes/header.php";
             data-live-dashboard
             data-initial-moisture="<?php echo htmlspecialchars((string) (dashboard_sensor_value($latestSensorReading, "soil_moisture") ?? "")); ?>"
             data-initial-ph="<?php echo htmlspecialchars((string) (dashboard_sensor_value($latestSensorReading, "soil_ph") ?? "")); ?>"
-            data-initial-nitrogen="<?php echo htmlspecialchars((string) (dashboard_sensor_value($latestSensorReading, "nitrogen") ?? "")); ?>"
-            data-initial-phosphorus="<?php echo htmlspecialchars((string) (dashboard_sensor_value($latestSensorReading, "phosphorus") ?? "")); ?>"
-            data-initial-potassium="<?php echo htmlspecialchars((string) (dashboard_sensor_value($latestSensorReading, "potassium") ?? "")); ?>">
+            data-initial-nitrogen="<?php echo htmlspecialchars(dashboard_raw_sensor_value($latestSensorReading, "nitrogen") ?? ""); ?>"
+            data-initial-phosphorus="<?php echo htmlspecialchars(dashboard_raw_sensor_value($latestSensorReading, "phosphorus") ?? ""); ?>"
+            data-initial-potassium="<?php echo htmlspecialchars(dashboard_raw_sensor_value($latestSensorReading, "potassium") ?? ""); ?>">
             <article class="sensor-card npk nutrient-card" data-sensor-card="npk">
                 <div class="sensor-icon">
                     <i class="bi bi-gem"></i>
                 </div>
                 <div class="sensor-card-content">
                     <span>NPK Sensor</span>
-                    <strong data-reading="npk"><?php echo $sensorNpk; ?></strong>
+                    <strong data-reading="npk"><?php echo htmlspecialchars($sensorNpk); ?></strong>
                     <small data-reading-status="npk"><?php echo $latestSensorReading ? "N, P, K mg/kg " . htmlspecialchars($sensorUpdatedText) : "Nitrogen, phosphorus, potassium"; ?></small>
                     <div class="nutrient-values" aria-label="NPK nutrient values">
                         <div class="nutrient-reading">
                             <b>Nitrogen</b>
                             <span class="nutrient-measurement">
-                                <output data-reading="nitrogen"><?php echo dashboard_telemetry_number($latestSensorReading, "nitrogen"); ?></output>
+                                <output data-reading="nitrogen"><?php echo htmlspecialchars(dashboard_raw_sensor_value($latestSensorReading, "nitrogen") ?? "--"); ?></output>
                                 <small class="sensor-unit">mg/kg</small>
                             </span>
                             <span class="status-badge status-unknown" data-status-badge="nitrogen" data-status-label="Nitrogen">NO DATA</span>
@@ -223,7 +237,7 @@ include "includes/header.php";
                         <div class="nutrient-reading">
                             <b>Phosphorus</b>
                             <span class="nutrient-measurement">
-                                <output data-reading="phosphorus"><?php echo dashboard_telemetry_number($latestSensorReading, "phosphorus"); ?></output>
+                                <output data-reading="phosphorus"><?php echo htmlspecialchars(dashboard_raw_sensor_value($latestSensorReading, "phosphorus") ?? "--"); ?></output>
                                 <small class="sensor-unit">mg/kg</small>
                             </span>
                             <span class="status-badge status-unknown" data-status-badge="phosphorus" data-status-label="Phosphorus">NO DATA</span>
@@ -231,7 +245,7 @@ include "includes/header.php";
                         <div class="nutrient-reading">
                             <b>Potassium</b>
                             <span class="nutrient-measurement">
-                                <output data-reading="potassium"><?php echo dashboard_telemetry_number($latestSensorReading, "potassium"); ?></output>
+                                <output data-reading="potassium"><?php echo htmlspecialchars(dashboard_raw_sensor_value($latestSensorReading, "potassium") ?? "--"); ?></output>
                                 <small class="sensor-unit">mg/kg</small>
                             </span>
                             <span class="status-badge status-unknown" data-status-badge="potassium" data-status-label="Potassium">NO DATA</span>
@@ -316,7 +330,7 @@ include "includes/header.php";
                     <div class="match-summary">
                         <span>Top Sensor-Based Score</span>
                         <strong data-recommendation-score>--</strong>
-                        <span class="suitability-badge is-na" data-recommendation-class>Not Assessed</span>
+                        <span class="suitability-badge is-na" data-recommendation-class>Insufficient Data</span>
                     </div>
                     <div class="crop-assessment-summary-copy">
                         <span>Highest sensor-based suitability score</span>
@@ -351,62 +365,29 @@ include "includes/header.php";
                                     <small><?php echo htmlspecialchars($crop["scientific_name"] ?? ""); ?></small>
                                 </span>
                                 <strong class="crop-assessment-percentage" data-crop-percentage>--</strong>
-                                <span class="suitability-badge is-na" data-crop-final-badge>Not Assessed</span>
+                                <span class="suitability-badge is-na" data-crop-final-badge>Insufficient Data</span>
                                 <i class="bi bi-chevron-down crop-assessment-chevron" aria-hidden="true"></i>
                             </summary>
 
                             <div class="crop-assessment-details">
                                 <div class="crop-assessment-metrics">
                                     <div>
-                                        <span>Assessed</span>
-                                        <strong data-crop-assessed>0 of 7 parameters</strong>
-                                    </div>
-                                    <div>
                                         <span>Score</span>
                                         <strong data-crop-score>--</strong>
                                     </div>
                                     <div>
-                                        <span>Raw Class</span>
-                                        <strong data-crop-raw-class>Not Assessed</strong>
-                                    </div>
-                                    <div>
                                         <span>Final Class</span>
-                                        <strong data-crop-final-class>Not Assessed</strong>
+                                        <strong data-crop-final-class>Insufficient Data</strong>
                                     </div>
-                                </div>
-
-                                <div class="crop-parameter-table-wrap">
-                                    <table class="crop-parameter-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Parameter</th>
-                                                <th>Measured</th>
-                                                <th>Assessment</th>
-                                                <th>Score</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($dashboardParameterDefinitions as $parameterCode => $definition) : ?>
-                                                <tr data-crop-parameter="<?php echo htmlspecialchars($parameterCode); ?>">
-                                                    <th><?php echo htmlspecialchars($definition["label"]); ?></th>
-                                                    <td data-parameter-measured>--</td>
-                                                    <td>
-                                                        <span class="parameter-assessment-badge is-not-assessed" data-parameter-assessment>NOT ASSESSED</span>
-                                                    </td>
-                                                    <td data-parameter-score>--</td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <section class="limiting-factor-panel">
                                     <div>
-                                        <span>Limiting Factors</span>
-                                        <strong data-limiting-summary>No assessed limiting factors yet.</strong>
+                                        <span>Parameters Assessed</span>
+                                        <strong data-crop-assessed>0 of 7</strong>
                                     </div>
-                                    <div class="limiting-factor-list" data-limiting-factors></div>
-                                </section>
+                                    <div class="crop-assessment-metric--limiting">
+                                        <span>Main Limiting Factor</span>
+                                        <strong data-crop-limiting-factor>Not available</strong>
+                                    </div>
+                                </div>
                             </div>
                         </details>
                     <?php endforeach; ?>
@@ -492,5 +473,11 @@ include "includes/header.php";
         JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PRESERVE_ZERO_FRACTION
     );
 ?></script>
-<script src="/assets/js/dashboard.js?v=20260826-crop-suitability-v1"></script>
+<script type="application/json" data-npk-classification><?php
+    echo json_encode(
+        $dashboardNpkClassification,
+        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PRESERVE_ZERO_FRACTION
+    );
+?></script>
+<script src="/assets/js/dashboard.js?v=20260827-crop-summary-v2"></script>
 <?php include "includes/footer.php"; ?>

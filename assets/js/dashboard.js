@@ -24,22 +24,38 @@
         return "HIGH";
     }
 
-    function getNitrogenLevel(value) {
-        if (value < 20) return "LOW";
-        if (value <= 40) return "MEDIUM";
+    let npkClassification = {};
+
+    function configureNpkClassification(configuration) {
+        npkClassification = configuration && typeof configuration === "object"
+            ? configuration
+            : {};
+    }
+
+    function classifyNpkLevel(value, thresholds) {
+        const parsed = numberValue(value);
+        const lowMax = numberValue(thresholds && thresholds.low_max);
+        const mediumMax = numberValue(thresholds && thresholds.medium_max);
+
+        if (parsed === null || lowMax === null || mediumMax === null || lowMax > mediumMax) {
+            return "NO DATA";
+        }
+
+        if (parsed <= lowMax) return "LOW";
+        if (parsed <= mediumMax) return "MEDIUM";
         return "HIGH";
+    }
+
+    function getNitrogenLevel(value) {
+        return classifyNpkLevel(value, npkClassification.nitrogen);
     }
 
     function getPhosphorusLevel(value) {
-        if (value < 15) return "LOW";
-        if (value <= 30) return "MEDIUM";
-        return "HIGH";
+        return classifyNpkLevel(value, npkClassification.phosphorus);
     }
 
     function getPotassiumLevel(value) {
-        if (value < 80) return "LOW";
-        if (value <= 150) return "MEDIUM";
-        return "HIGH";
+        return classifyNpkLevel(value, npkClassification.potassium);
     }
 
     function getStatusClass(status) {
@@ -54,8 +70,63 @@
         return parsed === null ? "NO DATA" : getLevel(parsed);
     }
 
+    function rawSensorText(value) {
+        if (
+            value === null ||
+            value === undefined ||
+            (typeof value === "string" && value.trim() === "")
+        ) {
+            return "--";
+        }
+
+        return typeof value === "string" ? value : String(value);
+    }
+
+    function hasSufficientCropData(crop) {
+        const assessed = numberValue(crop && crop.assessed_parameters);
+        const total = numberValue(crop && crop.total_parameters);
+        const percentage = numberValue(crop && crop.percentage);
+        const minimumRequired = total === null ? 5 : Math.min(5, total);
+        const finalClass = String(crop && crop.final_class || "").toUpperCase();
+
+        return assessed !== null
+            && total !== null
+            && total > 0
+            && assessed >= minimumRequired
+            && percentage !== null
+            && ["S1", "S2", "S3", "N"].includes(finalClass);
+    }
+
+    function mainLimitingFactor(crop) {
+        const factors = Array.isArray(crop && crop.limiting_factors)
+            ? crop.limiting_factors
+            : [];
+        const label = factors[0] && factors[0].label;
+
+        return typeof label === "string" && label.trim() !== ""
+            ? label
+            : "None identified";
+    }
+
+    const npkConfigurationElement = global.document
+        ? global.document.querySelector("[data-npk-classification]")
+        : null;
+
+    if (npkConfigurationElement) {
+        try {
+            configureNpkClassification(JSON.parse(npkConfigurationElement.textContent));
+        } catch (error) {
+            configureNpkClassification({});
+        }
+    }
+
     global.CropSenseTelemetryStatus = Object.freeze({
         numberValue,
+        rawSensorText,
+        hasSufficientCropData,
+        mainLimitingFactor,
+        configureNpkClassification,
+        classifyNpkLevel,
         getMoistureLevel,
         getPhLevel,
         getNitrogenLevel,
@@ -173,7 +244,7 @@
     };
 
     const celsiusText = (value) => `${fixed(value, 1)} °C`;
-    const nutrientText = (value) => measurementText(value);
+    const nutrientText = (value) => rawSensorText(value);
 
     const applyStatusBadge = (name, status) => {
         const statusClass = getStatusClass(status);
@@ -202,23 +273,10 @@
     };
 
     const suitabilityStateClasses = ["is-s1", "is-s2", "is-s3", "is-n", "is-na"];
-    const parameterStateClasses = [
-        "is-optimum",
-        "is-acceptable",
-        "is-marginal",
-        "is-unsuitable",
-        "is-no-data",
-        "is-not-assessed"
-    ];
 
     const suitabilityStateClass = (code) => {
         const normalized = String(code || "NA").toLowerCase();
         return ["s1", "s2", "s3", "n"].includes(normalized) ? `is-${normalized}` : "is-na";
-    };
-
-    const parameterStateClass = (assessment) => {
-        const normalized = String(assessment || "NOT_ASSESSED").toLowerCase().replace(/_/g, "-");
-        return `is-${normalized}`;
     };
 
     const setElementText = (root, selector, value) => {
@@ -239,72 +297,16 @@
         element.textContent = label || "Not Assessed";
     };
 
-    const measuredParameterText = (parameter) => {
-        const value = numberValue(parameter ? parameter.value : null);
-
-        if (value === null) {
-            return "--";
-        }
-
-        const unit = String(parameter.unit || "").trim();
-        return `${measurementText(value)}${unit ? ` ${unit}` : ""}`;
-    };
-
-    const renderLimitingFactors = (card, crop) => {
-        const list = card.querySelector("[data-limiting-factors]");
-        const factors = Array.isArray(crop.limiting_factors) ? crop.limiting_factors : [];
-        setElementText(card, "[data-limiting-summary]", crop.limiting_factor_reason || "No assessed limiting factors yet.");
-
-        if (!list) {
-            return;
-        }
-
-        list.replaceChildren();
-        factors.forEach((factor) => {
-            const item = document.createElement("div");
-            const heading = document.createElement("strong");
-            const reading = document.createElement("span");
-            const assessment = document.createElement("span");
-            const guidance = document.createElement("small");
-
-            heading.textContent = factor.label || factor.parameter || "Parameter";
-            reading.textContent = measuredParameterText(factor);
-            assessment.textContent = `${factor.assessment_label || factor.assessment || "Assessed"} · ${factor.score}/3`;
-            assessment.className = `parameter-assessment-badge ${parameterStateClass(factor.assessment)}`;
-            guidance.textContent = factor.guidance || "Review measured soil conditions.";
-            item.append(heading, reading, assessment, guidance);
-            list.appendChild(item);
-        });
-    };
-
     const resetCropAssessmentCard = (card) => {
         card.classList.remove(...suitabilityStateClasses);
         card.classList.add("is-na");
         setElementText(card, "[data-crop-rank]", "--");
         setElementText(card, "[data-crop-percentage]", "--");
-        setElementText(card, "[data-crop-assessed]", "0 of 7 parameters");
+        setElementText(card, "[data-crop-assessed]", "0 of 7");
         setElementText(card, "[data-crop-score]", "--");
-        setElementText(card, "[data-crop-raw-class]", "Not Assessed");
-        setElementText(card, "[data-crop-final-class]", "Not Assessed");
-        applySuitabilityState(card.querySelector("[data-crop-final-badge]"), "NA", "Not Assessed");
-        setElementText(card, "[data-limiting-summary]", "No assessed limiting factors yet.");
-
-        const limitingList = card.querySelector("[data-limiting-factors]");
-        if (limitingList) {
-            limitingList.replaceChildren();
-        }
-
-        card.querySelectorAll("[data-crop-parameter]").forEach((row) => {
-            setElementText(row, "[data-parameter-measured]", "--");
-            setElementText(row, "[data-parameter-score]", "--");
-            const badge = row.querySelector("[data-parameter-assessment]");
-
-            if (badge) {
-                badge.classList.remove(...parameterStateClasses);
-                badge.classList.add("is-no-data");
-                badge.textContent = "NO DATA";
-            }
-        });
+        setElementText(card, "[data-crop-final-class]", "Insufficient Data");
+        setElementText(card, "[data-crop-limiting-factor]", "Not available");
+        applySuitabilityState(card.querySelector("[data-crop-final-badge]"), "NA", "Insufficient Data");
     };
 
     const renderCropSuitability = (assessment = null) => {
@@ -315,24 +317,33 @@
         const cards = Array.from(document.querySelectorAll("[data-crop-assessment]"));
         const cardsByCrop = new Map(cards.map((card) => [card.dataset.cropAssessment, card]));
         const top = assessment && assessment.top_recommendation ? assessment.top_recommendation : null;
+        const topCrop = top
+            ? recommendations.find((crop) => crop.crop_key === top.crop_key) || null
+            : null;
+        const topHasSufficientData = hasSufficientCropData(topCrop);
+        const topClassLabel = topHasSufficientData
+            ? top.final_full_label
+            : "Insufficient Data";
 
         cards.forEach(resetCropAssessmentCard);
         applySuitabilityState(
             document.querySelector("[data-recommendation-class]"),
-            top ? top.final_class : "NA",
-            top ? top.final_full_label : "Not Assessed"
+            topHasSufficientData ? top.final_class : "NA",
+            topClassLabel
         );
         setText("[data-recommendation-score]", top && top.percentage !== null ? `${measurementText(top.percentage)}%` : "--");
         setText(
             "[data-recommendation-title]",
-            top ? `${top.crop} — ${top.final_full_label}` : "Waiting for an assessable reading"
+            top ? `${top.crop} — ${topClassLabel}` : "Waiting for an assessable reading"
         );
         setText(
             "[data-recommendation-description]",
             assessment && assessment.error
                 ? assessment.error
-                : top
-                    ? "Top CropSense recommendation based on measured soil parameters. Open each crop to review its scored and unassessed parameters."
+                : topHasSufficientData
+                    ? "Top CropSense recommendation based on the available measured soil parameters."
+                    : top
+                        ? "More configured and measured parameters are required before showing a suitability class."
                     : "Crop-specific results appear when real sensor data and validated thresholds are both available."
         );
 
@@ -343,40 +354,24 @@
                 return;
             }
 
+            const hasSufficientData = hasSufficientCropData(crop);
+            const percentageText = crop.percentage === null ? "--" : `${measurementText(crop.percentage)}%`;
+            const finalClassLabel = hasSufficientData ? crop.final_full_label : "Insufficient Data";
+
             card.classList.remove(...suitabilityStateClasses);
-            card.classList.add(suitabilityStateClass(crop.final_class));
-            card.open = index === 0;
+            card.classList.add(hasSufficientData ? suitabilityStateClass(crop.final_class) : "is-na");
+            card.open = true;
             setElementText(card, "[data-crop-rank]", `#${crop.rank || index + 1}`);
-            setElementText(card, "[data-crop-percentage]", crop.percentage === null ? "--" : `${measurementText(crop.percentage)}%`);
-            setElementText(card, "[data-crop-assessed]", `${crop.assessed_parameters} of ${crop.total_parameters} parameters`);
-            setElementText(card, "[data-crop-score]", crop.maximum_score > 0 ? `${crop.score} / ${crop.maximum_score}` : "--");
-            setElementText(card, "[data-crop-raw-class]", crop.raw_full_label || "Not Assessed");
-            setElementText(card, "[data-crop-final-class]", crop.final_full_label || "Not Assessed");
+            setElementText(card, "[data-crop-percentage]", percentageText);
+            setElementText(card, "[data-crop-score]", percentageText);
+            setElementText(card, "[data-crop-assessed]", `${crop.assessed_parameters} of ${crop.total_parameters}`);
+            setElementText(card, "[data-crop-final-class]", finalClassLabel);
+            setElementText(card, "[data-crop-limiting-factor]", mainLimitingFactor(crop));
             applySuitabilityState(
                 card.querySelector("[data-crop-final-badge]"),
-                crop.final_class,
-                crop.final_full_label
+                hasSufficientData ? crop.final_class : "NA",
+                finalClassLabel
             );
-
-            (Array.isArray(crop.parameters) ? crop.parameters : []).forEach((parameter) => {
-                const row = card.querySelector(`[data-crop-parameter="${parameter.parameter}"]`);
-
-                if (!row) {
-                    return;
-                }
-
-                setElementText(row, "[data-parameter-measured]", measuredParameterText(parameter));
-                setElementText(row, "[data-parameter-score]", parameter.score === null ? "--" : `${parameter.score}/3`);
-                const badge = row.querySelector("[data-parameter-assessment]");
-
-                if (badge) {
-                    badge.classList.remove(...parameterStateClasses);
-                    badge.classList.add(parameterStateClass(parameter.assessment));
-                    badge.textContent = parameter.assessment_label || "NOT ASSESSED";
-                }
-            });
-
-            renderLimitingFactors(card, crop);
 
             if (list) {
                 list.appendChild(card);
@@ -463,9 +458,9 @@
             return;
         }
 
-        const nitrogen = numberValue(reading.nitrogen);
-        const phosphorus = numberValue(reading.phosphorus);
-        const potassium = numberValue(reading.potassium);
+        const nitrogen = reading.nitrogen;
+        const phosphorus = reading.phosphorus;
+        const potassium = reading.potassium;
         const moistureReading = reading.moisture ?? reading.soil_moisture;
         const phReading = reading.ph ?? reading.soil_ph;
         const ecReading = reading.ec ?? reading.soil_ec;
@@ -539,14 +534,15 @@
         }
     }
 
-    renderCropSuitability(initialSuitability);
-    updateTelemetryStatuses({
+    const initialSensorReading = {
         moisture: dashboard.dataset.initialMoisture,
         ph: dashboard.dataset.initialPh,
         nitrogen: dashboard.dataset.initialNitrogen,
         phosphorus: dashboard.dataset.initialPhosphorus,
         potassium: dashboard.dataset.initialPotassium
-    });
+    };
+    renderCropSuitability(initialSuitability);
+    updateTelemetryStatuses(initialSensorReading);
     setText("[data-activity-title]", "Loading latest sensor reading");
     setText("[data-activity-detail]", "Connecting to the CropSense sensor API");
     loadLatestReading();

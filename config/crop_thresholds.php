@@ -7,6 +7,13 @@ return [
         "soil_ph" => 0.20,
         "temperature" => 2.00,
     ],
+    // Temporary sensor-level interpretation thresholds for raw NPK readings.
+    // These are intentionally separate from crop-specific suitability ranges.
+    "npk_classification" => [
+        "nitrogen" => ["low_max" => 19.99, "medium_max" => 40.00],
+        "phosphorus" => ["low_max" => 14.99, "medium_max" => 30.00],
+        "potassium" => ["low_max" => 79.99, "medium_max" => 150.00],
+    ],
     "crops" => [
         "rice" => [
             "name" => "Rice",
