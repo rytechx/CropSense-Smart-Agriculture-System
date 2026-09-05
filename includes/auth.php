@@ -1,6 +1,8 @@
 <?php
+require_once __DIR__ . "/../config/app_url.php";
+
 if (($_SERVER["REQUEST_METHOD"] ?? "GET") !== "POST") {
-    header("Location: /login.php");
+    header('Location: ' . cropsense_url('login.php'));
     exit();
 }
 
@@ -16,7 +18,7 @@ require_once __DIR__ . "/../config/database.php";
 
     if (empty($login) || empty($password)) {
         $_SESSION['error'] = "Please enter your username/email and password.";
-        header("Location: ../login.php");
+        header('Location: ' . cropsense_url('login.php'));
         exit();
     }
 
@@ -25,7 +27,7 @@ require_once __DIR__ . "/../config/database.php";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         $_SESSION['error'] = "Login is not ready. Please check the database setup.";
-        header("Location: ../login.php");
+        header('Location: ' . cropsense_url('login.php'));
         exit();
     }
 
@@ -36,7 +38,7 @@ require_once __DIR__ . "/../config/database.php";
 
     if (!$result) {
         $_SESSION['error'] = "Unable to check account. Please check the database setup.";
-        header("Location: ../login.php");
+        header('Location: ' . cropsense_url('login.php'));
         exit();
     }
 
@@ -49,7 +51,7 @@ require_once __DIR__ . "/../config/database.php";
 
             cropsense_audit_log($conn, (int) $user['id'], "Blocked login attempt for inactive account");
 
-            header("Location: ../login.php");
+            header('Location: ' . cropsense_url('login.php'));
             exit();
         }
 
@@ -101,7 +103,7 @@ require_once __DIR__ . "/../config/database.php";
         $_SESSION['error'] =
             "Unable to prepare verification code.";
 
-        header("Location: ../login.php");
+        header('Location: ' . cropsense_url('login.php'));
         exit();
     }
 
@@ -117,7 +119,7 @@ require_once __DIR__ . "/../config/database.php";
         $_SESSION['error'] =
             "Unable to generate verification code.";
 
-        header("Location: ../login.php");
+        header('Location: ' . cropsense_url('login.php'));
         exit();
     }
 
@@ -137,7 +139,7 @@ require_once __DIR__ . "/../config/database.php";
         $_SESSION['error'] =
             "Unable to send verification code. Please try again.";
 
-        header("Location: ../login.php");
+        header('Location: ' . cropsense_url('login.php'));
         exit();
     }
 
@@ -162,7 +164,7 @@ require_once __DIR__ . "/../config/database.php";
         "Email OTP sent"
     );
 
-    header("Location: ../otp.php");
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 } else {
 
@@ -170,7 +172,7 @@ require_once __DIR__ . "/../config/database.php";
 
             cropsense_audit_log($conn, (int) $user['id'], "Failed login attempt");
 
-            header("Location: ../login.php");
+            header('Location: ' . cropsense_url('login.php'));
             exit();
 
         }
@@ -179,7 +181,7 @@ require_once __DIR__ . "/../config/database.php";
 
         $_SESSION['error'] = "Account not found.";
 
-        header("Location: ../login.php");
+        header('Location: ' . cropsense_url('login.php'));
         exit();
 
     }

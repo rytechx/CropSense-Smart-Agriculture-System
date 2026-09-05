@@ -15,6 +15,7 @@ $requiredTables = [
     'recommendations' => ['id', 'reading_id', 'recommended_crop', 'suitability', 'remarks', 'created_at'],
     'audit_logs' => ['id', 'user_id', 'activity', 'ip_address', 'created_at'],
     'crop_thresholds' => ['id', 'crop_name', 'ph_min', 'ph_max', 'moisture_min', 'moisture_max', 'temperature_min', 'temperature_max', 'humidity_min', 'humidity_max', 'nitrogen_min', 'nitrogen_max', 'phosphorus_min', 'phosphorus_max', 'potassium_min', 'potassium_max', 'description', 'created_at'],
+    'crop_parameter_thresholds' => ['id', 'crop_name', 'parameter_code', 'unit', 'optimum_min', 'optimum_max', 'acceptable_min', 'acceptable_max', 'marginal_min', 'marginal_max', 'source_note', 'created_at', 'updated_at'],
 ];
 
 echo "CropSense database connection: OK\n";
@@ -53,4 +54,3 @@ foreach ($requiredTables as $table => $requiredColumns) {
 }
 
 exit($hasErrors ? 1 : 0);
-

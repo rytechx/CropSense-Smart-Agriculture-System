@@ -1,4 +1,10 @@
 (function (global) {
+    const CROPSENSE_BASE_URL = global.CROPSENSE_BASE_URL || "/";
+
+    function cropsenseUrl(path = "") {
+        return CROPSENSE_BASE_URL + String(path).replace(/^\/+/, "");
+    }
+
     function numberValue(value) {
         if (
             value === null ||
@@ -144,7 +150,7 @@
         return;
     }
 
-    const apiUrl = "api/get_latest_reading.php";
+    const apiUrl = cropsenseUrl("api/get_latest_reading.php");
     const pollMs = 5000;
 
     const setText = (selector, value) => {

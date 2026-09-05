@@ -4,6 +4,11 @@ require("../assets/js/dashboard.js");
 
 const {
     numberValue,
+    rawSensorText,
+    hasSufficientCropData,
+    mainLimitingFactor,
+    configureNpkClassification,
+    classifyNpkLevel,
     getMoistureLevel,
     getPhLevel,
     getNitrogenLevel,
@@ -12,6 +17,12 @@ const {
     getStatusClass,
     getTelemetryStatus
 } = globalThis.CropSenseTelemetryStatus;
+
+configureNpkClassification({
+    nitrogen: { low_max: 19.99, medium_max: 40 },
+    phosphorus: { low_max: 14.99, medium_max: 30 },
+    potassium: { low_max: 79.99, medium_max: 150 }
+});
 
 const boundaryCases = [
     ["Moisture 24.9", getMoistureLevel, 24.9, "LOW"],
@@ -92,6 +103,16 @@ classCases.forEach(([label, actual, expected]) => {
 
 assertEqual("Numeric zero is preserved", numberValue(0), 0);
 assertEqual("API string zero is preserved", numberValue("0.00"), 0);
+assertEqual("Raw API string zero remains unchanged", rawSensorText("0.00"), "0.00");
+assertEqual("Raw decimal precision remains unchanged", rawSensorText("44.50"), "44.50");
+assertEqual("Classification includes low maximum", classifyNpkLevel(10, { low_max: 10, medium_max: 20 }), "LOW");
+assertEqual("Classification includes medium maximum", classifyNpkLevel(20, { low_max: 10, medium_max: 20 }), "MEDIUM");
+assertEqual("Classification above medium is high", classifyNpkLevel(20.01, { low_max: 10, medium_max: 20 }), "HIGH");
+assertEqual("Five of seven parameters can show a class", hasSufficientCropData({ assessed_parameters: 5, total_parameters: 7, percentage: 78, final_class: "S2" }), true);
+assertEqual("Four of seven parameters are insufficient", hasSufficientCropData({ assessed_parameters: 4, total_parameters: 7, percentage: 90, final_class: "S1" }), false);
+assertEqual("Missing percentage is insufficient", hasSufficientCropData({ assessed_parameters: 7, total_parameters: 7, percentage: null, final_class: "S1" }), false);
+assertEqual("Main limiting factor uses calculated label", mainLimitingFactor({ limiting_factors: [{ label: "Soil Moisture" }] }), "Soil Moisture");
+assertEqual("No limiting factor is reported honestly", mainLimitingFactor({ limiting_factors: [] }), "None identified");
 
 if (failures > 0) {
     console.error(`${failures} of ${assertions} assertions failed.`);

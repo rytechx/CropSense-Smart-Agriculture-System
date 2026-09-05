@@ -1,5 +1,6 @@
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
+require_once __DIR__ . "/../config/app_url.php";
 require_once __DIR__ . "/roles.php";
 
 if (!isset($deviceSummary)) {
@@ -11,12 +12,12 @@ if (!isset($deviceSummary)) {
     <div class="sidebar-header">
         <a
             class="sidebar-brand"
-            href="dashboard.php"
+            href="<?php echo htmlspecialchars(cropsense_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>"
             data-sidebar-brand
             aria-label="CropSense Live Monitoring"
             title="CropSense Live Monitoring">
             <span class="sidebar-logo-mark">
-                <img src="/assets/img/cropsense-logo.svg" alt="" data-logo-image>
+                <img src="<?php echo htmlspecialchars(cropsense_asset('img/cropsense-logo.svg'), ENT_QUOTES, 'UTF-8'); ?>" alt="" data-logo-image>
                 <i class="bi bi-flower2" aria-hidden="true"></i>
             </span>
             <div>
@@ -38,27 +39,27 @@ if (!isset($deviceSummary)) {
     </div>
 
     <nav class="sidebar-nav" aria-label="Main navigation">
-        <a href="dashboard.php" class="<?php echo $currentPage === 'dashboard.php' ? 'active' : ''; ?>" title="Live Monitoring">
+        <a href="<?php echo htmlspecialchars(cropsense_url('dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo $currentPage === 'dashboard.php' ? 'active' : ''; ?>" title="Live Monitoring">
             <i class="bi bi-broadcast"></i>
             Live Monitoring
         </a>
 
         <?php if (cropsense_is_admin()) : ?>
-            <a href="user_management.php?section=access-control" class="<?php echo $currentPage === 'user_management.php' ? 'active' : ''; ?>" title="Users">
+            <a href="<?php echo htmlspecialchars(cropsense_url('user_management.php?section=access-control'), ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo $currentPage === 'user_management.php' ? 'active' : ''; ?>" title="Users">
                 <i class="bi bi-people"></i>
                 Users
             </a>
             <?php if ($currentPage === 'user_management.php') : ?>
                 <div class="sidebar-submenu" aria-label="User management sections">
                     <a
-                        href="user_management.php?section=access-control"
+                        href="<?php echo htmlspecialchars(cropsense_url('user_management.php?section=access-control'), ENT_QUOTES, 'UTF-8'); ?>"
                         class="<?php echo ($managementSection ?? 'access-control') === 'access-control' ? 'active' : ''; ?>"
                         <?php echo ($managementSection ?? 'access-control') === 'access-control' ? 'aria-current="page"' : ''; ?>>
                         <i class="bi bi-person-plus"></i>
                         Access Control
                     </a>
                     <a
-                        href="user_management.php?section=accounts"
+                        href="<?php echo htmlspecialchars(cropsense_url('user_management.php?section=accounts'), ENT_QUOTES, 'UTF-8'); ?>"
                         class="<?php echo ($managementSection ?? 'access-control') === 'accounts' ? 'active' : ''; ?>"
                         <?php echo ($managementSection ?? 'access-control') === 'accounts' ? 'aria-current="page"' : ''; ?>>
                         <i class="bi bi-person-lines-fill"></i>
@@ -68,23 +69,23 @@ if (!isset($deviceSummary)) {
             <?php endif; ?>
         <?php endif; ?>
 
-        <a href="collected_data.php" class="<?php echo $currentPage === 'collected_data.php' ? 'active' : ''; ?>" title="Collected Data">
+        <a href="<?php echo htmlspecialchars(cropsense_url('collected_data.php'), ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo $currentPage === 'collected_data.php' ? 'active' : ''; ?>" title="Collected Data">
             <i class="bi bi-file-earmark-bar-graph"></i>
             Collected Data
         </a>
 
-        <a href="settings.php" class="<?php echo $currentPage === 'settings.php' ? 'active' : ''; ?>" title="Settings">
+        <a href="<?php echo htmlspecialchars(cropsense_url('settings.php'), ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo $currentPage === 'settings.php' ? 'active' : ''; ?>" title="Settings">
             <i class="bi bi-gear"></i>
             Settings
         </a>
 
-        <a href="logout.php" class="nav-logout" title="Logout">
+        <a href="<?php echo htmlspecialchars(cropsense_url('logout.php'), ENT_QUOTES, 'UTF-8'); ?>" class="nav-logout" title="Logout">
             <i class="bi bi-box-arrow-right"></i>
             Logout
         </a>
     </nav>
 
-    <a href="logout.php" class="logout-link mobile-logout">
+    <a href="<?php echo htmlspecialchars(cropsense_url('logout.php'), ENT_QUOTES, 'UTF-8'); ?>" class="logout-link mobile-logout">
         <i class="bi bi-box-arrow-right"></i>
         Logout
     </a>

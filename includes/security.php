@@ -22,6 +22,19 @@ if (!defined('CROPSENSE_MAX_SENSOR_PAYLOAD_BYTES')) {
     define('CROPSENSE_MAX_SENSOR_PAYLOAD_BYTES', 4096);
 }
 
+if (!function_exists('cropsense_csp_nonce')) {
+    function cropsense_csp_nonce()
+    {
+        static $nonce = null;
+
+        if ($nonce === null) {
+            $nonce = base64_encode(random_bytes(18));
+        }
+
+        return $nonce;
+    }
+}
+
 if (!function_exists('cropsense_start_secure_session')) {
     function cropsense_start_secure_session()
     {
@@ -67,7 +80,7 @@ if (!function_exists('cropsense_apply_security_headers')) {
         header(
             "Content-Security-Policy: " .
             "default-src 'self'; " .
-            "script-src 'self' https://cdn.jsdelivr.net; " .
+            "script-src 'self' 'nonce-" . cropsense_csp_nonce() . "' https://cdn.jsdelivr.net; " .
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " .
             "font-src 'self' https://cdn.jsdelivr.net data:; " .
             "img-src 'self' data: https://images.unsplash.com; " .

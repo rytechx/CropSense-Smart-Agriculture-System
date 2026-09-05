@@ -1,7 +1,9 @@
 <?php
 
+require_once __DIR__ . '/../config/app_url.php';
+
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
-    header('Location: ../login.php');
+    header('Location: ' . cropsense_url('login.php'));
     exit();
 }
 
@@ -19,7 +21,7 @@ cropsense_start_secure_session();
 
 if (empty($_SESSION['pending_2fa_user_id'])) {
     $_SESSION['error'] = 'Your verification session has expired. Please sign in again.';
-    header('Location: ../login.php');
+    header('Location: ' . cropsense_url('login.php'));
     exit();
 }
 
@@ -34,7 +36,7 @@ $submittedOtp = trim($_POST['otp'] ?? '');
 
 if (!preg_match('/^\d{6}$/', $submittedOtp)) {
     $_SESSION['otp_error'] = 'Please enter a valid 6-digit verification code.';
-    header('Location: ../otp.php');
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 }
 
@@ -55,7 +57,7 @@ $otpStmt = $conn->prepare(
 
 if (!$otpStmt) {
     $_SESSION['otp_error'] = 'Unable to verify your code right now.';
-    header('Location: ../otp.php');
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 }
 
@@ -77,7 +79,7 @@ if (!$otpRecord) {
     $_SESSION['otp_error'] =
         'No active verification code was found. Please sign in again.';
 
-    header('Location: ../otp.php');
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 }
 
@@ -104,7 +106,7 @@ if ((int) $otpRecord['attempts'] >= 5) {
     $_SESSION['otp_error'] =
         'Too many incorrect attempts. Please sign in again to receive a new code.';
 
-    header('Location: ../otp.php');
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 }
 
@@ -131,7 +133,7 @@ if (strtotime($otpRecord['expires_at']) < time()) {
     $_SESSION['otp_error'] =
         'Your verification code has expired. Please sign in again.';
 
-    header('Location: ../otp.php');
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 }
 
@@ -174,7 +176,7 @@ if (!password_verify($submittedOtp, $otpRecord['otp_hash'])) {
         'Failed email OTP verification'
     );
 
-    header('Location: ../otp.php');
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 }
 
@@ -193,7 +195,7 @@ $userStmt = $conn->prepare(
 
 if (!$userStmt) {
     $_SESSION['otp_error'] = 'Unable to complete authentication.';
-    header('Location: ../otp.php');
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 }
 
@@ -216,7 +218,7 @@ if (!$user || ($user['status'] ?? '') !== 'Active') {
     session_unset();
     session_destroy();
 
-    header('Location: ../login.php');
+    header('Location: ' . cropsense_url('login.php'));
     exit();
 }
 
@@ -234,7 +236,7 @@ $usedStmt = $conn->prepare(
 
 if (!$usedStmt) {
     $_SESSION['otp_error'] = 'Unable to complete verification.';
-    header('Location: ../otp.php');
+    header('Location: ' . cropsense_url('otp.php'));
     exit();
 }
 
@@ -286,5 +288,5 @@ cropsense_audit_log(
 |--------------------------------------------------------------------------
 */
 
-header('Location: ../dashboard.php');
+header('Location: ' . cropsense_url('dashboard.php'));
 exit();

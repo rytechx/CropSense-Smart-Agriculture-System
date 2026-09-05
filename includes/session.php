@@ -1,13 +1,12 @@
 <?php
+require_once __DIR__ . "/../config/app_url.php";
 require_once __DIR__ . "/security.php";
 
 cropsense_start_secure_session();
 
-if(!isset($_SESSION['user_id'])){
-
-    header("Location: login.php");
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ' . cropsense_url('login.php'));
     exit();
-
 }
 
 require_once __DIR__ . "/../config/database.php";
@@ -27,7 +26,7 @@ if ($sessionUserStatement) {
 if (!$sessionUser || ($sessionUser['status'] ?? 'Inactive') !== 'Active') {
     $_SESSION = [];
     session_destroy();
-    header("Location: login.php");
+    header('Location: ' . cropsense_url('login.php'));
     exit();
 }
 
