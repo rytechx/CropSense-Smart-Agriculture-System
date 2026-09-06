@@ -4,8 +4,13 @@
 // It is retained to preserve the existing sensor/API contract.
 return [
     "near_tolerance" => [
-        "soil_ph" => 0.20,
-        "temperature" => 2.00,
+        "ph" => 0.20,
+        "soil_temperature" => 2.00,
+        "moisture" => 10,
+        "nitrogen" => 5,
+        "phosphorus" => 5,
+        "potassium" => 20,
+        "ec_fraction" => 0.10,
     ],
     // Temporary sensor-level interpretation thresholds for raw NPK readings.
     // These are intentionally separate from crop-specific suitability ranges.
@@ -14,39 +19,46 @@ return [
         "phosphorus" => ["low_max" => 14.99, "medium_max" => 30.00],
         "potassium" => ["low_max" => 79.99, "medium_max" => 150.00],
     ],
+    // Authoritative validated crop ranges, 2026-09-06. EC uses microSiemens/cm.
     "crops" => [
-        "rice" => [
-            "name" => "Rice",
-            "scientific_name" => "Oryza sativa",
-            "ph" => ["min" => 5.50, "max" => 6.50],
-            "temperature" => ["min" => 26.00, "max" => 38.00, "unit" => "C"],
-            "moisture_requirement" => "Flooded / standing water required",
-            "nitrogen_requirement" => "80-120 kg/hectare",
-            "phosphorus_requirement" => "20-40 kg/hectare",
-            "potassium_requirement" => "20-40 kg/hectare",
-            "ec_requirement" => "No approved EC range configured",
-        ],
         "corn" => [
             "name" => "Corn",
             "scientific_name" => "Zea mays",
-            "ph" => ["min" => 5.80, "max" => 7.00],
-            "temperature" => ["min" => 24.00, "max" => 35.00, "unit" => "C"],
-            "moisture_requirement" => "Moderate moisture",
-            "nitrogen_requirement" => "120-180 kg/hectare",
-            "phosphorus_requirement" => "40-60 kg/hectare",
-            "potassium_requirement" => "40-60 kg/hectare",
-            "ec_requirement" => "No approved EC range configured",
+            "recommended" => [
+                "moisture" => ["min" => 60, "max" => 80],
+                "soil_temperature" => ["min" => 20, "max" => 30],
+                "ec" => ["min" => 0, "max" => 1700, "max_exclusive" => true],
+                "ph" => ["min" => 6, "max" => 6.8],
+                "nitrogen" => ["min" => 20, "max" => 30],
+                "phosphorus" => ["min" => 15, "max" => 25],
+                "potassium" => ["min" => 120, "max" => 180],
+            ],
         ],
         "tobacco" => [
             "name" => "Tobacco",
             "scientific_name" => "Nicotiana tabacum",
-            "ph" => ["min" => 6.00, "max" => 7.00],
-            "temperature" => ["min" => 25.00, "max" => 32.00, "unit" => "C"],
-            "moisture_requirement" => "Well-drained soil; avoid waterlogging",
-            "nitrogen_requirement" => "50-80 kg/hectare",
-            "phosphorus_requirement" => "20-40 kg/hectare",
-            "potassium_requirement" => "20-40 kg/hectare",
-            "ec_requirement" => "No approved EC range configured",
+            "recommended" => [
+                "moisture" => ["min" => 60, "max" => 80],
+                "soil_temperature" => ["min" => 20, "max" => 30],
+                "ec" => ["min" => 0, "max" => 2000, "max_exclusive" => true],
+                "ph" => ["min" => 5.8, "max" => 6.2],
+                "nitrogen" => ["min" => 15, "max" => 25],
+                "phosphorus" => ["min" => 20, "max" => 30],
+                "potassium" => ["min" => 150, "max" => 250],
+            ],
+        ],
+        "rice" => [
+            "name" => "Rice",
+            "scientific_name" => "Oryza sativa",
+            "recommended" => [
+                "moisture" => ["min" => 90, "max" => 100],
+                "soil_temperature" => ["min" => 25, "max" => 30],
+                "ec" => ["min" => 0, "max" => 3000, "max_exclusive" => true],
+                "ph" => ["min" => 5.5, "max" => 6.5],
+                "nitrogen" => ["min" => 15, "max" => 25],
+                "phosphorus" => ["min" => 10, "max" => 20],
+                "potassium" => ["min" => 80, "max" => 150],
+            ],
         ],
     ],
 ];

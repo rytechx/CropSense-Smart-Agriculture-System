@@ -109,7 +109,7 @@ assertEqual("Classification includes low maximum", classifyNpkLevel(10, { low_ma
 assertEqual("Classification includes medium maximum", classifyNpkLevel(20, { low_max: 10, medium_max: 20 }), "MEDIUM");
 assertEqual("Classification above medium is high", classifyNpkLevel(20.01, { low_max: 10, medium_max: 20 }), "HIGH");
 assertEqual("Five of seven parameters can show a class", hasSufficientCropData({ assessed_parameters: 5, total_parameters: 7, percentage: 78, final_class: "S2" }), true);
-assertEqual("Four of seven parameters are insufficient", hasSufficientCropData({ assessed_parameters: 4, total_parameters: 7, percentage: 90, final_class: "S1" }), false);
+assertEqual("Partial data is scored using available parameters", hasSufficientCropData({ assessed_parameters: 4, total_parameters: 7, percentage: 90, final_class: "S1" }), true);
 assertEqual("Missing percentage is insufficient", hasSufficientCropData({ assessed_parameters: 7, total_parameters: 7, percentage: null, final_class: "S1" }), false);
 assertEqual("Main limiting factor uses calculated label", mainLimitingFactor({ limiting_factors: [{ label: "Soil Moisture" }] }), "Soil Moisture");
 assertEqual("No limiting factor is reported honestly", mainLimitingFactor({ limiting_factors: [] }), "None identified");

@@ -19,142 +19,71 @@ function assert_same($label, $actual, $expected)
     echo "PASS {$label}" . PHP_EOL;
 }
 
-function fixture_threshold($optimum = null, $acceptable = null, $marginal = null)
-{
-    return [
-        "unit" => "fixture-unit",
-        "source" => "test_fixture",
-        "ranges" => [
-            "optimum" => $optimum,
-            "acceptable" => $acceptable,
-            "marginal" => $marginal,
-        ],
-    ];
+$thresholds = cropsense_get_crop_thresholds();
+$sample = ["nitrogen" => 24, "phosphorus" => 22, "potassium" => 135, "moisture" => 72,
+    "ph" => 6.3, "soil_temperature" => 28, "ec" => 950];
+$result = cropsense_assess_crop_suitability(null, $sample);
+foreach ([["Corn", 14, 100.0, "Highly Suitable"], ["Tobacco", 12, 85.7, "Highly Suitable"], ["Rice", 11, 78.6, "Suitable"]] as $i => $expected) {
+    $crop = $result["recommendations"][$i];
+    assert_same("Sample rank " . ($i + 1), [$crop["crop"], $crop["score"], $crop["percentage"], $crop["final_label"]], $expected);
+    assert_same("Maximum is fourteen", $crop["maximum_score"], 14);
+    echo "#" . $crop["rank"] . " " . $crop["crop"] . " " . $crop["percentage"] . "% " . $crop["final_label"] . " | " . $crop["match_explanation"] . " | " . $crop["limiting_factor_reason"] . PHP_EOL;
 }
-
-$completeThreshold = fixture_threshold(
-    ["min" => 40.0, "max" => 60.0],
-    ["min" => 30.0, "max" => 70.0],
-    ["min" => 20.0, "max" => 80.0]
-);
-
-assert_same("OPTIMUM produces score 3", cropsense_classify_parameter(50, $completeThreshold)["score"], 3);
-assert_same("ACCEPTABLE produces score 2", cropsense_classify_parameter(65, $completeThreshold)["score"], 2);
-assert_same("MARGINAL produces score 1", cropsense_classify_parameter(75, $completeThreshold)["score"], 1);
-assert_same("UNSUITABLE produces score 0", cropsense_classify_parameter(90, $completeThreshold)["score"], 0);
-
-$missingResult = cropsense_classify_parameter(null, $completeThreshold);
-assert_same("Missing sensor value is NO DATA", $missingResult["assessment"], "NO_DATA");
-assert_same("Missing sensor value is excluded", $missingResult["score"], null);
-assert_same("Empty sensor value is NO DATA", cropsense_classify_parameter("", $completeThreshold)["assessment"], "NO_DATA");
-assert_same("NaN sensor value is NO DATA", cropsense_classify_parameter(NAN, $completeThreshold)["assessment"], "NO_DATA");
-
-$unconfiguredResult = cropsense_classify_parameter(50, fixture_threshold());
-assert_same("Missing threshold is NOT ASSESSED", $unconfiguredResult["assessment"], "NOT_ASSESSED");
-assert_same("Missing threshold is excluded", $unconfiguredResult["score"], null);
-
-$partialThreshold = fixture_threshold(null, ["min" => 30.0, "max" => 70.0], null);
-assert_same(
-    "Incomplete tiers do not invent UNSUITABLE",
-    cropsense_classify_parameter(90, $partialThreshold)["assessment"],
-    "NOT_ASSESSED"
-);
-
-$zeroThreshold = fixture_threshold(["min" => -1.0, "max" => 1.0], ["min" => -2.0, "max" => 2.0], ["min" => -3.0, "max" => 3.0]);
-$zeroResult = cropsense_classify_parameter("0.00", $zeroThreshold);
-assert_same("Real API zero is preserved", cropsense_numeric_value("0.00"), 0.0);
-assert_same("Real API zero is evaluated normally", $zeroResult["score"], 3);
-
-$definitions = cropsense_parameter_definitions();
-$parameters = [];
-foreach ($definitions as $parameterCode => $definition) {
-    $parameters[$parameterCode] = fixture_threshold();
-    $parameters[$parameterCode]["unit"] = $definition["unit"];
+assert_same("Strongest tobacco limitation", $result["recommendations"][1]["limiting_factors"][0]["parameter"], "potassium");
+assert_same("Rice moisture limitation", $result["recommendations"][2]["limiting_factors"][0]["parameter"], "moisture");
+foreach ($thresholds as $crop) {
+    foreach ($crop["parameters"] as $code => $threshold) {
+        $range = $threshold["ranges"]["acceptable"];
+        $near = $threshold["ranges"]["marginal"];
+        foreach ([[$range["min"], 2], [$range["max"], $code === "ec" ? 1 : 2],
+            [$near["max"], 1], [$near["max"] + 0.001, 0],
+            [$near["min"], $code === "ec" ? 2 : 1], [$near["min"] - 0.001, 0]] as [$value, $score]) {
+            assert_same($crop["crop"] . " " . $code . " boundary " . $value, cropsense_classify_parameter($value, $threshold)["score"], $score);
+        }
+        foreach ([null, "", "  ", NAN, INF, "invalid"] as $value) {
+            assert_same("Invalid values excluded", cropsense_classify_parameter($value, $threshold)["score"], null);
+        }
+    }
 }
-$parameters["moisture"] = $completeThreshold;
-$parameters["soil_temperature"] = $completeThreshold;
-$parameters["ec"] = $completeThreshold;
-
-$cropFixture = [
-    "crop_key" => "fixture_crop",
-    "crop" => "Fixture Crop",
-    "scientific_name" => "Testus fixture",
-    "parameters" => $parameters,
-];
-$readingFixture = [
-    "soil_moisture" => 50,
-    "temperature" => 65,
-    "soil_ec" => 75,
-    "soil_ph" => 6.2,
-    "nitrogen" => 0,
-    "phosphorus" => 24,
-    "potassium" => 120,
-];
-$cropResult = cropsense_calculate_crop_score($readingFixture, $cropFixture);
-
-assert_same("EC is read from soil_ec", $cropResult["parameters"][2]["value"], 75.0);
-assert_same("Only configured parameters are assessed", $cropResult["assessed_parameters"], 3);
-assert_same("Dynamic total score", $cropResult["score"], 6);
-assert_same("Dynamic maximum score", $cropResult["maximum_score"], 9);
-assert_same("Dynamic denominator percentage", $cropResult["percentage"], 66.7);
-assert_same("Unconfigured nitrogen zero remains zero", $cropResult["parameters"][4]["value"], 0.0);
-assert_same("Unconfigured nitrogen zero is excluded", $cropResult["parameters"][4]["score"], null);
-assert_same("Lowest-scoring factors are identified", count($cropResult["limiting_factors"]), 1);
-assert_same("Marginal EC is the limiting factor", $cropResult["limiting_factors"][0]["parameter"], "ec");
-
-$multipleFactors = cropsense_identify_limiting_factors([
-    ["parameter" => "moisture", "label" => "Soil Moisture", "value" => 20.0, "unit" => "%", "assessment" => "MARGINAL", "assessment_label" => "Marginal", "score" => 1],
-    ["parameter" => "nitrogen", "label" => "Nitrogen", "value" => 10.0, "unit" => "mg/kg", "assessment" => "MARGINAL", "assessment_label" => "Marginal", "score" => 1],
-    ["parameter" => "ph", "label" => "Soil pH", "value" => 6.0, "unit" => "", "assessment" => "ACCEPTABLE", "assessment_label" => "Acceptable", "score" => 2],
-]);
-assert_same("All tied limiting factors are returned", count($multipleFactors["factors"]), 2);
-
-assert_same(
-    "90 percent with lowest score 2 is capped at S2",
-    cropsense_apply_limiting_factor_rule(cropsense_score_class(90), 2)["code"],
-    "S2"
-);
-assert_same(
-    "90 percent with lowest score 1 is capped at S3",
-    cropsense_apply_limiting_factor_rule(cropsense_score_class(90), 1)["code"],
-    "S3"
-);
-assert_same(
-    "90 percent with lowest score 0 becomes N",
-    cropsense_apply_limiting_factor_rule(cropsense_score_class(90), 0)["code"],
-    "N"
-);
-
+foreach ([0, "0.00"] as $zero) {
+    $reading = array_fill_keys(array_keys($sample), $zero);
+    $crop = cropsense_calculate_crop_score($reading, $thresholds["corn"]);
+    assert_same("All zeros remain assessed", $crop["assessed_parameters"], 7);
+    assert_same("Zero EC matches upper-only range", $crop["score"], 2);
+    foreach ($crop["parameters"] as $p) assert_same("Real zero preserved", $p["value"], 0.0);
+}
+$partial = $sample;
+unset($partial["potassium"]);
+$crop = cropsense_calculate_crop_score($partial, $thresholds["corn"]);
+assert_same("Missing value excluded from denominator", $crop["maximum_score"], 12);
+assert_same("Partial score", $crop["percentage"], 100.0);
+assert_same("Missing label", $crop["missing_parameters"], ["Potassium"]);
+assert_same("Missing status", $crop["parameters"][6]["assessment"], "NO_DATA");
+$empty = cropsense_assess_crop_suitability(null, null);
+assert_same("No data has no recommendation", $empty["top_recommendation"], null);
+assert_same("No data percentage", $empty["recommendations"][0]["percentage"], null);
+assert_same("No data denominator", $empty["recommendations"][0]["maximum_score"], 0);
+$humid = $sample;
+$humid["humidity"] = 999;
+assert_same("Humidity ignored", cropsense_assess_crop_suitability(null, $humid), $result);
+$aliases = ["soil_moisture" => 72, "temperature" => 28, "soil_ec" => 950, "soil_ph" => 6.3, "nitrogen" => 24, "phosphorus" => 22, "potassium" => 135];
+assert_same("Existing database and API aliases preserved", cropsense_assess_crop_suitability(null, $aliases), $result);
+foreach ([[85, "S1"], [84.99, "S2"], [70, "S2"], [69.99, "S3"], [50, "S3"], [49.99, "N"]] as [$value, $code]) {
+    assert_same("Class boundary " . $value, cropsense_score_class($value)["code"], $code);
+}
+$limited = $sample;
+$limited["potassium"] = 0;
+$crop = cropsense_calculate_crop_score($limited, $thresholds["corn"]);
+assert_same("Limitation does not cap percentage class", $crop["final_class"], "S1");
 $ranked = cropsense_rank_crop_recommendations([
-    ["crop" => "S2 Lower", "final_class" => "S2", "percentage" => 72.0],
-    ["crop" => "N Crop", "final_class" => "N", "percentage" => 99.0],
-    ["crop" => "S3 Crop", "final_class" => "S3", "percentage" => 99.0],
-    ["crop" => "S1 Crop", "final_class" => "S1", "percentage" => 85.0],
-    ["crop" => "S2 Higher", "final_class" => "S2", "percentage" => 80.0],
+    ["crop" => "Low", "percentage" => 70, "final_class" => "S1"],
+    ["crop" => "High", "percentage" => 90, "final_class" => "N"]]);
+assert_same("Percentage alone determines order", $ranked[0]["crop"], "High");
+$config = cropsense_crop_config();
+assert_same("Generic NPK config unchanged", $config["npk_classification"], [
+    "nitrogen" => ["low_max" => 19.99, "medium_max" => 40.00],
+    "phosphorus" => ["low_max" => 14.99, "medium_max" => 30.00],
+    "potassium" => ["low_max" => 79.99, "medium_max" => 150.00],
 ]);
-
-assert_same("S1 outranks S2", $ranked[0]["crop"], "S1 Crop");
-assert_same("Higher percentage wins within S2", $ranked[1]["crop"], "S2 Higher");
-assert_same("Lower percentage follows within S2", $ranked[2]["crop"], "S2 Lower");
-assert_same("S3 outranks N", $ranked[3]["crop"], "S3 Crop");
-assert_same("N ranks last", $ranked[4]["crop"], "N Crop");
-
-assert_same("85 percent maps to S1", cropsense_score_class(85)["code"], "S1");
-assert_same("84.99 percent maps to S2", cropsense_score_class(84.99)["code"], "S2");
-assert_same("70 percent maps to S2", cropsense_score_class(70)["code"], "S2");
-assert_same("69.99 percent maps to S3", cropsense_score_class(69.99)["code"], "S3");
-assert_same("50 percent maps to S3", cropsense_score_class(50)["code"], "S3");
-assert_same("Below 50 percent maps to N", cropsense_score_class(49.99)["code"], "N");
-
-$missingFieldReading = $readingFixture;
-unset($missingFieldReading["soil_ec"]);
-$missingFieldResult = cropsense_calculate_crop_score($missingFieldReading, $cropFixture);
-assert_same("Missing API field becomes NO DATA", $missingFieldResult["parameters"][2]["assessment"], "NO_DATA");
-assert_same("Missing API field is excluded", $missingFieldResult["assessed_parameters"], 2);
-
-if ($failures > 0) {
-    echo "{$failures} of {$assertions} assertions failed." . PHP_EOL;
-    exit(1);
-}
-
-echo "{$assertions} assertions passed." . PHP_EOL;
+echo "{$assertions} assertions; {$failures} failures." . PHP_EOL;
+exit($failures > 0 ? 1 : 0);

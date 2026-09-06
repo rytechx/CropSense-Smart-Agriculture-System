@@ -92,7 +92,7 @@
         const assessed = numberValue(crop && crop.assessed_parameters);
         const total = numberValue(crop && crop.total_parameters);
         const percentage = numberValue(crop && crop.percentage);
-        const minimumRequired = total === null ? 5 : Math.min(5, total);
+        const minimumRequired = 1;
         const finalClass = String(crop && crop.final_class || "").toUpperCase();
 
         return assessed !== null
@@ -307,6 +307,7 @@
         card.classList.remove(...suitabilityStateClasses);
         card.classList.add("is-na");
         setElementText(card, "[data-crop-rank]", "--");
+        ["match", "missing", "recommended"].forEach((name) => setElementText(card, `[data-crop-${name}]`, name === "missing" ? "NO DATA" : ""));
         setElementText(card, "[data-crop-percentage]", "--");
         setElementText(card, "[data-crop-assessed]", "0 of 7");
         setElementText(card, "[data-crop-score]", "--");
@@ -328,7 +329,7 @@
             : null;
         const topHasSufficientData = hasSufficientCropData(topCrop);
         const topClassLabel = topHasSufficientData
-            ? top.final_full_label
+            ? top.final_label
             : "Insufficient Data";
 
         cards.forEach(resetCropAssessmentCard);
@@ -347,7 +348,7 @@
             assessment && assessment.error
                 ? assessment.error
                 : topHasSufficientData
-                    ? "Top CropSense recommendation based on the available measured soil parameters."
+                    ? (["S1", "S2"].includes(top.final_class) ? "Recommended for current soil condition" : "No crop reaches Suitable for the current soil condition.")
                     : top
                         ? "More configured and measured parameters are required before showing a suitability class."
                     : "Crop-specific results appear when real sensor data and validated thresholds are both available."
@@ -362,17 +363,20 @@
 
             const hasSufficientData = hasSufficientCropData(crop);
             const percentageText = crop.percentage === null ? "--" : `${measurementText(crop.percentage)}%`;
-            const finalClassLabel = hasSufficientData ? crop.final_full_label : "Insufficient Data";
+            const finalClassLabel = hasSufficientData ? crop.final_label : "Insufficient Data";
 
             card.classList.remove(...suitabilityStateClasses);
             card.classList.add(hasSufficientData ? suitabilityStateClass(crop.final_class) : "is-na");
             card.open = true;
             setElementText(card, "[data-crop-rank]", `#${crop.rank || index + 1}`);
             setElementText(card, "[data-crop-percentage]", percentageText);
-            setElementText(card, "[data-crop-score]", percentageText);
+            setElementText(card, "[data-crop-score]", `${crop.score} / ${crop.maximum_score}`);
+            setElementText(card, "[data-crop-match]", crop.match_explanation || "NO DATA");
+            setElementText(card, "[data-crop-missing]", crop.missing_parameters?.length ? `NO DATA: ${crop.missing_parameters.join(", ")}. Score uses ${crop.assessed_parameters} of 7 parameters.` : "");
+            setElementText(card, "[data-crop-recommended]", index === 0 && ["S1", "S2"].includes(crop.final_class) ? "Recommended for current soil condition" : "");
             setElementText(card, "[data-crop-assessed]", `${crop.assessed_parameters} of ${crop.total_parameters}`);
             setElementText(card, "[data-crop-final-class]", finalClassLabel);
-            setElementText(card, "[data-crop-limiting-factor]", mainLimitingFactor(crop));
+            setElementText(card, "[data-crop-limiting-factor]", crop.limiting_factor_reason || mainLimitingFactor(crop));
             applySuitabilityState(
                 card.querySelector("[data-crop-final-badge]"),
                 hasSufficientData ? crop.final_class : "NA",

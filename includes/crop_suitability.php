@@ -159,118 +159,32 @@ if (!function_exists("cropsense_table_exists")) {
 if (!function_exists("cropsense_get_crop_thresholds")) {
     function cropsense_get_crop_thresholds($connection = null)
     {
+        // Validated configuration is authoritative; legacy database tiers must not override it.
         $config = cropsense_crop_config();
-        $definitions = cropsense_parameter_definitions();
         $thresholds = [];
-
-        foreach (($config["crops"] ?? []) as $cropKey => $crop) {
-            $key = cropsense_crop_key($cropKey);
+        foreach ($config["crops"] as $key => $crop) {
             $parameters = [];
-
-            foreach ($definitions as $parameterCode => $definition) {
-                $parameters[$parameterCode] = [
-                    "parameter_code" => $parameterCode,
+            foreach (cropsense_parameter_definitions() as $code => $definition) {
+                $range = $crop["recommended"][$code];
+                $tolerance = $code === "ec"
+                    ? $range["max"] * $config["near_tolerance"]["ec_fraction"]
+                    : $config["near_tolerance"][$code];
+                $parameters[$code] = [
+                    "parameter_code" => $code,
                     "unit" => $definition["unit"],
-                    "ranges" => cropsense_empty_ranges(),
-                    "source" => "not_configured",
+                    "tolerance" => $tolerance,
+                    "ranges" => [
+                        "optimum" => null,
+                        "acceptable" => $range,
+                        "marginal" => ["min" => $code === "ec" ? 0 : $range["min"] - $tolerance,
+                                       "max" => $range["max"] + $tolerance],
+                    ],
+                    "source" => "validated_config_20260906",
                 ];
             }
-
-            // These numeric ranges already existed in CropSense configuration.
-            // They are preserved as acceptable ranges; no optimum or marginal
-            // values are inferred from them.
-            $phRange = cropsense_valid_range($crop["ph"]["min"] ?? null, $crop["ph"]["max"] ?? null);
-            if ($phRange !== null) {
-                $parameters["ph"]["ranges"]["acceptable"] = $phRange;
-                $parameters["ph"]["source"] = "existing_config";
-            }
-
-            $temperatureRange = cropsense_valid_range(
-                $crop["temperature"]["min"] ?? null,
-                $crop["temperature"]["max"] ?? null
-            );
-            if ($temperatureRange !== null) {
-                $parameters["soil_temperature"]["ranges"]["acceptable"] = $temperatureRange;
-                $parameters["soil_temperature"]["source"] = "existing_config";
-            }
-
-            $thresholds[$key] = [
-                "crop_key" => $key,
-                "crop" => $crop["name"] ?? ucfirst($key),
-                "scientific_name" => $crop["scientific_name"] ?? "",
-                "parameters" => $parameters,
-            ];
+            $thresholds[$key] = ["crop_key" => $key, "crop" => $crop["name"],
+                "scientific_name" => $crop["scientific_name"], "parameters" => $parameters];
         }
-
-        if (!$connection instanceof mysqli || $connection->connect_error) {
-            return $thresholds;
-        }
-
-        if (cropsense_table_exists($connection, "crop_thresholds")) {
-            $legacyResult = $connection->query("SELECT * FROM crop_thresholds ORDER BY id ASC");
-            $legacyMap = [
-                "ph" => ["ph_min", "ph_max"],
-                "moisture" => ["moisture_min", "moisture_max"],
-                "soil_temperature" => ["temperature_min", "temperature_max"],
-                "nitrogen" => ["nitrogen_min", "nitrogen_max"],
-                "phosphorus" => ["phosphorus_min", "phosphorus_max"],
-                "potassium" => ["potassium_min", "potassium_max"],
-            ];
-
-            while ($legacyResult && ($row = $legacyResult->fetch_assoc())) {
-                $cropKey = cropsense_crop_key($row["crop_name"] ?? "");
-
-                if (!isset($thresholds[$cropKey])) {
-                    continue;
-                }
-
-                foreach ($legacyMap as $parameterCode => $columns) {
-                    $range = cropsense_valid_range($row[$columns[0]] ?? null, $row[$columns[1]] ?? null);
-
-                    if ($range !== null) {
-                        $thresholds[$cropKey]["parameters"][$parameterCode]["ranges"]["acceptable"] = $range;
-                        $thresholds[$cropKey]["parameters"][$parameterCode]["source"] = "legacy_crop_thresholds";
-                    }
-                }
-            }
-        }
-
-        if (!cropsense_table_exists($connection, "crop_parameter_thresholds")) {
-            return $thresholds;
-        }
-
-        $normalizedResult = $connection->query(
-            "SELECT crop_name, parameter_code, unit,
-                    optimum_min, optimum_max,
-                    acceptable_min, acceptable_max,
-                    marginal_min, marginal_max
-             FROM crop_parameter_thresholds
-             ORDER BY crop_name, parameter_code"
-        );
-
-        while ($normalizedResult && ($row = $normalizedResult->fetch_assoc())) {
-            $cropKey = cropsense_crop_key($row["crop_name"] ?? "");
-            $parameterCode = strtolower(trim((string) ($row["parameter_code"] ?? "")));
-            $parameterCode = $parameterCode === "temperature" ? "soil_temperature" : $parameterCode;
-
-            if (!isset($thresholds[$cropKey]["parameters"][$parameterCode])) {
-                continue;
-            }
-
-            $thresholds[$cropKey]["parameters"][$parameterCode] = [
-                "parameter_code" => $parameterCode,
-                "unit" => trim((string) ($row["unit"] ?? "")) !== ""
-                    ? $row["unit"]
-                    : $definitions[$parameterCode]["unit"],
-                "ranges" => [
-                    "optimum" => cropsense_valid_range($row["optimum_min"], $row["optimum_max"]),
-                    "acceptable" => cropsense_valid_range($row["acceptable_min"], $row["acceptable_max"]),
-                    "marginal" => cropsense_valid_range($row["marginal_min"], $row["marginal_max"]),
-                ],
-                "source" => "crop_parameter_thresholds",
-            ];
-        }
-
         return $thresholds;
     }
 }
@@ -281,7 +195,7 @@ if (!function_exists("cropsense_range_contains")) {
         return is_array($range) &&
             isset($range["min"], $range["max"]) &&
             $value >= $range["min"] &&
-            $value <= $range["max"];
+            (!empty($range["max_exclusive"]) ? $value < $range["max"] : $value <= $range["max"]);
     }
 }
 
@@ -289,7 +203,7 @@ if (!function_exists("cropsense_calculate_parameter_score")) {
     function cropsense_calculate_parameter_score($assessmentCode)
     {
         $scores = [
-            "OPTIMUM" => 3,
+            "OPTIMUM" => 2,
             "ACCEPTABLE" => 2,
             "MARGINAL" => 1,
             "UNSUITABLE" => 0,
@@ -330,7 +244,7 @@ if (!function_exists("cropsense_classify_parameter")) {
             if (cropsense_range_contains($numericValue, $ranges[$rangeKey] ?? null)) {
                 return [
                     "assessment" => $code,
-                    "assessment_label" => ucfirst(strtolower($code)),
+                    "assessment_label" => $code === "MARGINAL" ? "Near recommended range" : "Recommended range",
                     "score" => cropsense_calculate_parameter_score($code),
                     "reason" => "The measured value is inside the configured " . strtolower($code) . " range.",
                 ];
@@ -374,7 +288,7 @@ if (!function_exists("cropsense_score_class")) {
             return ["code" => "S1", "label" => "Highly Suitable", "full_label" => "S1 – Highly Suitable", "rank" => 4];
         }
         if ($value >= 70) {
-            return ["code" => "S2", "label" => "Moderately Suitable", "full_label" => "S2 – Moderately Suitable", "rank" => 3];
+            return ["code" => "S2", "label" => "Suitable", "full_label" => "S2 – Suitable", "rank" => 3];
         }
         if ($value >= 50) {
             return ["code" => "S3", "label" => "Marginally Suitable", "full_label" => "S3 – Marginally Suitable", "rank" => 2];
@@ -387,18 +301,8 @@ if (!function_exists("cropsense_score_class")) {
 if (!function_exists("cropsense_apply_limiting_factor_rule")) {
     function cropsense_apply_limiting_factor_rule($rawClass, $lowestScore)
     {
-        if (!is_array($rawClass) || $lowestScore === null || $lowestScore >= 3) {
-            return $rawClass;
-        }
-
-        $caps = [
-            2 => cropsense_score_class(70),
-            1 => cropsense_score_class(50),
-            0 => cropsense_score_class(0),
-        ];
-        $cap = $caps[(int) $lowestScore] ?? $rawClass;
-
-        return ($rawClass["rank"] ?? 0) > ($cap["rank"] ?? 0) ? $cap : $rawClass;
+        // Compatibility helper: classification is now determined only by percentage.
+        return $rawClass;
     }
 }
 
@@ -416,7 +320,7 @@ if (!function_exists("cropsense_identify_limiting_factors")) {
         $lowestScore = min(array_column($scored, "score"));
         $factors = [];
 
-        if ($lowestScore < 3) {
+        if ($lowestScore < 2) {
             foreach ($scored as $parameter) {
                 if ($parameter["score"] === $lowestScore) {
                     $factors[] = [
@@ -427,12 +331,14 @@ if (!function_exists("cropsense_identify_limiting_factors")) {
                         "assessment" => $parameter["assessment"],
                         "assessment_label" => $parameter["assessment_label"],
                         "score" => $parameter["score"],
-                        "guidance" => "Review " . strtolower($parameter["label"]) . " conditions.",
+                        "guidance" => $parameter["reason"],
+                        "deviation" => $parameter["deviation"] ?? 0,
                     ];
                 }
             }
         }
 
+        usort($factors, static function ($a, $b) { return $b["deviation"] <=> $a["deviation"]; });
         return ["lowest_score" => $lowestScore, "factors" => $factors];
     }
 }
@@ -479,7 +385,20 @@ if (!function_exists("cropsense_calculate_crop_score")) {
                 $totalScore += $score;
             }
 
+            $recommended = $threshold["ranges"]["acceptable"] ?? null;
+            $deviation = 0;
+            if ($score !== null && $score < 2 && $recommended !== null) {
+                $below = $value < $recommended["min"];
+                $distance = $below ? $recommended["min"] - $value : $value - $recommended["max"];
+                $deviation = $distance / max(0.000001, $threshold["tolerance"] ?? 1);
+                $classification["reason"] = $definition["label"] . ($below ? " is below" : " is above")
+                    . " the recommended range.";
+                if (!empty($recommended["max_exclusive"]) && $value == $recommended["max"]) {
+                    $classification["reason"] = $definition["label"] . " is at the excluded recommended maximum.";
+                }
+            }
             $parameters[] = [
+                "deviation" => $deviation,
                 "parameter" => $parameterCode,
                 "label" => $definition["label"],
                 "value" => $value,
@@ -487,27 +406,31 @@ if (!function_exists("cropsense_calculate_crop_score")) {
                 "assessment" => $classification["assessment"],
                 "assessment_label" => $classification["assessment_label"],
                 "score" => $score,
-                "maximum_score" => $score === null ? null : 3,
+                "maximum_score" => $score === null ? null : 2,
                 "reason" => $classification["reason"],
                 "threshold_source" => $threshold["source"] ?? "not_configured",
                 "configured_ranges" => $threshold["ranges"] ?? cropsense_empty_ranges(),
             ];
         }
 
-        $maximumScore = $assessedCount * 3;
+        $maximumScore = $assessedCount * 2;
         $percentage = $maximumScore > 0 ? ($totalScore / $maximumScore) * 100 : null;
         $rawClass = cropsense_score_class($percentage);
         $limiting = cropsense_identify_limiting_factors($parameters);
         $finalClass = cropsense_apply_limiting_factor_rule($rawClass, $limiting["lowest_score"]);
-        $limitingLabels = array_column($limiting["factors"], "label");
-        $limitingReason = $limitingLabels
-            ? cropsense_join_labels($limitingLabels) . (count($limitingLabels) === 1 ? " is" : " are") . " a limiting factor."
-            : ($assessedCount > 0 ? "No assessed parameter caps the score-based class." : "No parameters could be assessed.");
+        $limitingReason = $limiting["factors"]
+            ? "Main limitation: " . $limiting["factors"][0]["guidance"]
+            : ($assessedCount > 0 ? "No limitation among the assessed parameters." : "NO DATA");
+        $matchingCount = count(array_filter($parameters, static function ($p) { return $p["score"] === 2; }));
+        $missingLabels = array_column(array_filter($parameters, static function ($p) { return $p["assessment"] === "NO_DATA"; }), "label");
 
         return [
             "crop_key" => $cropThreshold["crop_key"],
             "crop" => $cropThreshold["crop"],
             "scientific_name" => $cropThreshold["scientific_name"],
+            "matching_parameters" => $matchingCount,
+            "match_explanation" => $assessedCount > 0 ? $matchingCount . " of " . $assessedCount . " parameters match the recommended range." : "NO DATA: No sensor parameters are available.",
+            "missing_parameters" => $missingLabels,
             "assessed_parameters" => $assessedCount,
             "total_parameters" => count($definitions),
             "score" => $totalScore,
@@ -539,13 +462,6 @@ if (!function_exists("cropsense_rank_crop_recommendations")) {
     function cropsense_rank_crop_recommendations($recommendations)
     {
         usort($recommendations, static function ($left, $right) {
-            $classComparison = cropsense_final_class_rank($right["final_class"] ?? "NA")
-                <=> cropsense_final_class_rank($left["final_class"] ?? "NA");
-
-            if ($classComparison !== 0) {
-                return $classComparison;
-            }
-
             $percentageComparison = ($right["percentage"] ?? -1) <=> ($left["percentage"] ?? -1);
 
             if ($percentageComparison !== 0) {
@@ -620,7 +536,7 @@ if (!function_exists("cropsense_assess_crop_suitability")) {
 
         return [
             "title" => "Sensor-Based Crop Suitability Assessment",
-            "class_method" => "CropSense score-based suitability classes with FAO-inspired labels",
+            "class_method" => "Recommended range match: 2 points; near range: 1 point; outside: 0 points",
             "assessment_basis" => [
                 "method" => "latest",
                 "description" => "Latest available sensor reading",
